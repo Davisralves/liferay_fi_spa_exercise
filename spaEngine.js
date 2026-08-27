@@ -1,11 +1,16 @@
 class SpaEngine {
   #routes;
-  constructor(routes = []) {
+  #enable;
+
+  constructor(routes = [], enable = true) {
     this.#routes = routes;
+    this.#enable = enable;
     this.init();
   }
 
   init() {
+    if (!this.#enable) return;
+
     document.addEventListener('click', (event) => {
       const link = event.target.closest('a');
 

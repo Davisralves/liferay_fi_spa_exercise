@@ -273,7 +273,22 @@ async function runTests() {
   });
 
   await describe('Enabled option', async () => {
-    // Tests for enabled: true and enabled: false.
+    await test('does not initialize when the engine is disabled', () => {
+      const originalAddEventListener = document.addEventListener;
+
+      let listenerCount = 0;
+
+      document.addEventListener = () => {
+        listenerCount += 1;
+      };
+      try {
+        new SpaEngine([], false);
+
+        assert(listenerCount === 0, 'disabled engine should not register document listeners');
+      } finally {
+        document.addEventListener = originalAddEventListener;
+      }
+    });
   });
 
   await describe('Loading bar', async () => {
