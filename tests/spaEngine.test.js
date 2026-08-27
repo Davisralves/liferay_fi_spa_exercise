@@ -66,8 +66,8 @@ async function runTests() {
                             New content
                         </h1>
                     `;
-
-        window.spaEngine.replaceBody(nextBody);
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(nextBody, loadingBar);
 
         assert(document.querySelector('#new-content') !== null, 'new body content should be rendered');
       },
@@ -89,7 +89,8 @@ async function runTests() {
                         </script>
                     `;
 
-        window.spaEngine.replaceBody(nextBody);
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(nextBody, loadingBar);
 
         assert(document.querySelector('#script-result').textContent === 'executed', 'inline script should be executed');
       },
@@ -292,7 +293,65 @@ async function runTests() {
   });
 
   await describe('Loading bar', async () => {
-    // Tests for loading start and loading completion.
+    await test(
+      'starts loading when navigation begins and removes the bar when navigation finishes',
+      async () => {
+        const originalGetNextDocument = window.spaEngine.getNextDocument;
+
+        let resolveDocument;
+
+        const pendingDocument = new Promise((resolve) => {
+          resolveDocument = resolve;
+        });
+
+        window.spaEngine.getNextDocument = () => {
+          return pendingDocument;
+        };
+
+        const navigation = window.spaEngine.navigate('../details.html', false);
+
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 550);
+        });
+
+        const loadingBar = document.getElementById('loading-bar');
+
+        assert(loadingBar !== null, 'loading bar should exist while navigation is pending');
+
+        assert(loadingBar.getAttribute('is-loading') === 'true', 'loading bar should be in the loading state');
+
+        const nextDocument = new DOMParser().parseFromString(
+          `
+                        <!DOCTYPE html>
+                        <html>
+                            <head>
+                                <title>Loaded Page</title>
+                            </head>
+                            <body>
+                                <h1 id="loaded-page">
+                                    Loaded Page
+                                </h1>
+                            </body>
+                        </html>
+                    `,
+          'text/html',
+        );
+
+        resolveDocument(nextDocument);
+
+        await navigation;
+
+        assert(document.querySelector('#loaded-page') !== null, 'new page should be rendered');
+
+        assert(
+          document.getElementById('loading-bar') === null,
+          'loading bar should be removed after navigation finishes',
+        );
+
+        window.spaEngine.getNextDocument = originalGetNextDocument;
+      },
+      restoreDefaultPage,
+    );
   });
 
   await describe('data-no-spa links', async () => {

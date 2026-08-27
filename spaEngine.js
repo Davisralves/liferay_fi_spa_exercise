@@ -46,7 +46,7 @@ class SpaEngine {
 
       const nextDocument = await this.getNextDocument(url);
 
-      this.replaceChildren(nextDocument.body, loadingBar);
+      this.replaceBody(nextDocument.body, loadingBar);
       document.title = nextDocument.title;
 
       if (updateHistory) {
@@ -69,7 +69,7 @@ class SpaEngine {
     return new DOMParser().parseFromString(html, 'text/html');
   }
 
-  replaceChildren(nextBody, loadingBar) {
+  replaceBody(nextBody, loadingBar) {
     document.body.replaceChildren(loadingBar, ...nextBody.childNodes);
 
     this.executeScripts();
@@ -125,7 +125,7 @@ class SpaEngine {
 
     stylesheet.id = 'spa-engine-stylesheet';
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = 'spaEngine.css';
+    stylesheet.href = new URL('spaEngine.css', document.currentScript.src);
 
     document.head.appendChild(stylesheet);
   }
