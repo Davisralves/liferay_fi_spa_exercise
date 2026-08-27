@@ -42,7 +42,7 @@ class SpaEngine {
   async navigate(url, updateHistory = true) {
     const loadingBar = this.insertLoadingBar();
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate a delay for demonstration purposes
+      await this.delay(500); // Simulate a delay for demonstration purposes
 
       const nextDocument = await this.getNextDocument(url);
 
@@ -109,10 +109,10 @@ class SpaEngine {
   removeLoadingBar(loadingBar) {
     return new Promise((resolve) => {
       loadingBar.setAttribute('is-loading', 'false');
-      window.setTimeout(() => {
+      this.delay(300).then(() => {
         loadingBar.remove();
         resolve();
-      }, 300);
+      });
     });
   }
 
