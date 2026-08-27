@@ -271,6 +271,22 @@ async function runTests() {
       restoreDefaultPage,
     );
   });
+
+  await describe('Enabled option', async () => {
+    // Tests for enabled: true and enabled: false.
+  });
+
+  await describe('Loading bar', async () => {
+    // Tests for loading start and loading completion.
+  });
+
+  await describe('data-no-spa links', async () => {
+    // Tests that marked links are not intercepted.
+  });
+
+  await describe('Component state preservation', async () => {
+    // Tests for saving and restoring state by component ID.
+  });
 }
 
 runTests();
