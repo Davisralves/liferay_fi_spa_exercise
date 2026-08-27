@@ -355,7 +355,54 @@ async function runTests() {
   });
 
   await describe('data-no-spa links', async () => {
-    // Tests that marked links are not intercepted.
+    await test(
+      'does not intercept links marked with data-no-spa',
+      () => {
+        const link = document.createElement('a');
+        const originalNavigate = window.spaEngine.navigate;
+        const originalPreventDefault = MouseEvent.prototype.preventDefault;
+
+        let navigateCalled = false;
+        let preventDefaultCalled = false;
+
+        link.href = '../details.html';
+        link.dataset.noSpa = 'true';
+
+        const preventBrowserNavigation = (event) => {
+          originalPreventDefault.call(event);
+        };
+
+        window.addEventListener('click', preventBrowserNavigation);
+
+        document.body.append(link);
+
+        window.spaEngine.navigate = () => {
+          navigateCalled = true;
+        };
+
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+        });
+
+        clickEvent.preventDefault = () => {
+          preventDefaultCalled = true;
+          originalPreventDefault.call(clickEvent);
+        };
+
+        try {
+          link.dispatchEvent(clickEvent);
+
+          assert(!preventDefaultCalled, 'data-no-spa links should not call preventDefault');
+
+          assert(!navigateCalled, 'data-no-spa links should not trigger SPA navigation');
+        } finally {
+          window.removeEventListener('click', preventBrowserNavigation);
+          window.spaEngine.navigate = originalNavigate;
+        }
+      },
+      restoreDefaultPage,
+    );
   });
 
   await describe('Component state preservation', async () => {

@@ -15,7 +15,13 @@ class SpaEngine {
     document.addEventListener('click', (event) => {
       const link = event.target.closest('a');
 
-      if (!link || link?.origin !== window.location.origin || this.isNotAnSpaRoute(link.href)) return;
+      if (
+        !link ||
+        link?.origin !== window.location.origin ||
+        this.isNotAnSpaRoute(link.href) ||
+        link.dataset.noSpa !== undefined
+      )
+        return;
 
       event.preventDefault();
 
