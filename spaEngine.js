@@ -1,5 +1,7 @@
 class SpaEngine {
-  constructor() {
+  #routes;
+  constructor(routes = []) {
+    this.#routes = routes;
     this.init();
   }
 
@@ -7,7 +9,7 @@ class SpaEngine {
     document.addEventListener('click', (event) => {
       const link = event.target.closest('a');
 
-      if (!link || link.origin !== window.location.origin) return;
+      if (!link || link?.origin !== window.location.origin || this.isNotAnSpaRoute(link.href)) return;
 
       event.preventDefault();
 
@@ -17,6 +19,18 @@ class SpaEngine {
     window.addEventListener('popstate', () => {
       this.navigate(window.location.href, false);
     });
+  }
+
+  isNotAnSpaRoute(url) {
+    return !this.#routes.some((route) => this.matchesRoute(url, route));
+  }
+
+  matchesRoute(url, route) {
+    const parsedUrl = new URL(url, window.location.href);
+    const pathValue = parsedUrl.pathname;
+    const escapedRoute = route.replace(/[.+?^${}()|[\]\\]/g, String.raw`\$&`);
+    const regex = new RegExp(`^${escapedRoute.replaceAll('*', '.*')}$`);
+    return regex.test(pathValue);
   }
 
   async navigate(url, updateHistory = true) {
@@ -65,4 +79,4 @@ class SpaEngine {
   }
 }
 
-window.spaEngine = new SpaEngine();
+window.SpaEngine = SpaEngine;

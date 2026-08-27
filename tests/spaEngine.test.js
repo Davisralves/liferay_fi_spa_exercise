@@ -220,6 +220,76 @@ async function runTests() {
     },
     restoreDefaultPage,
   );
+
+  await test(
+    'matches an HTML route',
+    async () => {
+      const isNotAnSpaRoute = window.spaEngine.isNotAnSpaRoute('../details.html');
+
+      assert(isNotAnSpaRoute === false, 'details.html should match *.html');
+    },
+    restoreDefaultPage,
+  );
+
+  await test(
+    'matches a route with a prefix wildcard',
+    async () => {
+      const isNotAnSpaRoute = window.spaEngine.isNotAnSpaRoute('/site/about');
+
+      assert(isNotAnSpaRoute === false, '/site/about should match /site/*');
+    },
+    restoreDefaultPage,
+  );
+
+  await test(
+    'rejects a URL outside the configured prefix',
+    async () => {
+      const isNotAnSpaRoute = window.spaEngine.isNotAnSpaRoute('/admin/about');
+
+      assert(isNotAnSpaRoute === true, '/admin/about should not match /site/*');
+    },
+    restoreDefaultPage,
+  );
+
+  await test(
+    'matches an exact route',
+    async () => {
+      const matches = window.spaEngine.matchesRoute('/about.html', '/about.html');
+
+      assert(matches, '/about.html should match the exact route');
+    },
+    restoreDefaultPage,
+  );
+
+  await test(
+    'rejects a different exact route',
+    async () => {
+      const matches = window.spaEngine.matchesRoute('/contact.html', '/about.html');
+
+      assert(matches === false, '/contact.html should not match /about.html');
+    },
+    restoreDefaultPage,
+  );
+
+  await test(
+    'matches routes using only the pathname',
+    async () => {
+      const matches = window.spaEngine.matchesRoute('../details.html?tab=info#top', '*.html');
+
+      assert(matches, 'query parameters and hashes should not break route matching');
+    },
+    restoreDefaultPage,
+  );
+
+  await test(
+    'does not treat the dot as a regex wildcard',
+    async () => {
+      const matches = window.spaEngine.matchesRoute('/detailsXhtml', '/details.html');
+
+      assert(matches === false, '/details.html should not match /detailsXhtml');
+    },
+    restoreDefaultPage,
+  );
 }
 
 runTests();
