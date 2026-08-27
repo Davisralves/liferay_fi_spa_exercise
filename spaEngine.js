@@ -5,6 +5,7 @@ class SpaEngine {
   constructor(routes = [], enable = true) {
     this.#routes = routes;
     this.#enable = enable;
+    this.loadStyles();
     this.init();
   }
 
@@ -39,13 +40,20 @@ class SpaEngine {
   }
 
   async navigate(url, updateHistory = true) {
-    const nextDocument = await this.getNextDocument(url);
+    const loadingBar = this.insertLoadingBar();
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate a delay for demonstration purposes
 
-    this.replaceBody(nextDocument.body);
-    document.title = nextDocument.title;
+      const nextDocument = await this.getNextDocument(url);
 
-    if (updateHistory) {
-      window.history.pushState({}, '', url);
+      this.replaceChildren(nextDocument.body, loadingBar);
+      document.title = nextDocument.title;
+
+      if (updateHistory) {
+        window.history.pushState({}, '', url);
+      }
+    } finally {
+      await this.removeLoadingBar(loadingBar);
     }
   }
 
@@ -61,8 +69,8 @@ class SpaEngine {
     return new DOMParser().parseFromString(html, 'text/html');
   }
 
-  replaceBody(nextBody) {
-    document.body.replaceChildren(...nextBody.childNodes);
+  replaceChildren(nextBody, loadingBar) {
+    document.body.replaceChildren(loadingBar, ...nextBody.childNodes);
 
     this.executeScripts();
   }
@@ -81,6 +89,49 @@ class SpaEngine {
 
       script.replaceWith(reloadedScript);
     }
+  }
+
+  insertLoadingBar() {
+    const loadingBar = document.createElement('div');
+
+    loadingBar.id = 'loading-bar';
+
+    document.body.prepend(loadingBar);
+
+    // Force the browser to render the initial width before changing it.
+    loadingBar.offsetWidth;
+
+    loadingBar.setAttribute('is-loading', 'true');
+
+    return loadingBar;
+  }
+
+  removeLoadingBar(loadingBar) {
+    return new Promise((resolve) => {
+      loadingBar.setAttribute('is-loading', 'false');
+      window.setTimeout(() => {
+        loadingBar.remove();
+        resolve();
+      }, 300);
+    });
+  }
+
+  loadStyles() {
+    if (document.querySelector('#spa-engine-stylesheet')) {
+      return;
+    }
+
+    const stylesheet = document.createElement('link');
+
+    stylesheet.id = 'spa-engine-stylesheet';
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = 'spaEngine.css';
+
+    document.head.appendChild(stylesheet);
+  }
+
+  delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
