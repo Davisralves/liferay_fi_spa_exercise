@@ -155,82 +155,120 @@ The loading bar is inserted before navigation. When new content is rendered, the
 
 The stylesheet is loaded dynamically by the engine, keeping the host-page integration limited to the two JavaScript files.
 
-### Preserve component form values
+### Manage component state
 
 Stateful components are marked with `data-spa-component` and must have an `id`:
 
 ```html
-<section id="barber-selection" data-spa-component>
-  <input id="barber-ana" name="barber" type="radio" value="ana" />
-
-  <input id="barber-bruno" name="barber" type="radio" value="bruno" />
+<section id="service-selection" data-spa-component>
+  <input id="service-haircut" name="services" type="checkbox" value="haircut" />
+  <p id="service-summary">0 services selected</p>
 </section>
 ```
 
-Before navigation, the engine captures the state of `input`, `textarea`, and `select` elements inside marked components. The state is restored in the detached document before the new body is rendered. This allows page scripts to initialize from the restored values without displaying the component's default state first.
-
-The current implementation preserves:
-
-- Text and search input values.
-- `textarea` values.
-- Selected `option` values.
-- Checkbox and radio-button state.
-
-Only marked components are captured:
+The component ID identifies the corresponding component on another page. The engine only captures marked components:
 
 ```javascript
 document.querySelectorAll('[data-spa-component][id]');
 ```
 
-The component ID identifies the corresponding component on the next page. The control IDs identify the controls whose values should be restored. Components and controls that are not present on the next page are skipped.
+#### Automatic form state
 
-The booking fixtures demonstrate the behavior with a shared order control and page-specific search controls:
+By default, the engine automatically captures `input`, `textarea`, and `select` elements inside marked components. It stores text values for regular controls and `checked` values for checkboxes and radio buttons.
 
-```text
-Page A: booking-search-a
-Page B: booking-search-b
+For automatic restoration, the destination page must contain the same component ID and matching control IDs. Controls that are not present on the destination page are skipped.
+
+The captured state has this general structure:
+
+```javascript
+{
+  'booking-controls': {
+    form: {
+      'booking-order': {
+        checked: false,
+      },
+    },
+  },
+}
 ```
 
-Because those search controls have different IDs, the search value starts fresh on Page B. The `booking-order` control uses the same ID on Pages A and B, so its checked state is restored. Barber and service controls use stable IDs so their selections can be displayed on the checkout page.
+The state is restored in the detached document before its body is rendered. This allows page scripts to initialize from restored values without first displaying the component's default state.
 
-The engine also exposes a reset method:
+#### Custom state API
+
+Automatic form state is not enough for derived or application-owned state, such as a selected service count, a table page, a collection of selected item IDs, or a summary generated from several controls. A component can register custom state handlers with `save()` and `restore()`:
+
+```javascript
+window.spaEngine.registerComponent('service-selection', {
+  save(component) {
+    return {
+      selectedServiceCount: component.querySelectorAll('input[name="services"]:checked').length,
+      appointmentTime: component.querySelector('input[name="appointment-time"]:checked')?.value ?? null,
+    };
+  },
+
+  restore(component, state) {
+    component.querySelector('#service-summary').textContent = `${state.selectedServiceCount} services selected`;
+    component.querySelector('#appointment-summary').textContent = state.appointmentTime
+      ? `Appointment: ${state.appointmentTime}`
+      : 'No appointment time selected';
+  },
+});
+```
+
+The registration ID must match the component's HTML ID. `save(component)` receives the current component and returns any serializable state object. `restore(component, state)` receives the matching component from the fetched page and the state returned by `save()`.
+
+The engine stores automatic form state and custom state together:
+
+```javascript
+{
+  'service-selection': {
+    form: {
+      'service-haircut': {
+        checked: true,
+      },
+    },
+    custom: {
+      selectedServiceCount: 1,
+      appointmentTime: 'afternoon',
+    },
+  },
+}
+```
+
+The navigation lifecycle is:
+
+```text
+Capture automatic form state and registered custom state
+  -> Fetch the next document
+  -> Restore both state types in the detached document
+  -> Replace the current body
+  -> Execute the new page scripts
+```
+
+Page scripts can call `captureComponentState()` after a user changes application-owned state. This keeps the custom cache current before the next navigation:
+
+```javascript
+window.spaEngine.captureComponentState();
+```
+
+The booking fixtures demonstrate this behavior with barber selection, multiple service selection, appointment time, filtering, ordering, and checkout summaries.
+
+The state cache can be reset completely:
 
 ```javascript
 window.spaEngine.resetComponentState();
 ```
 
-This clears the complete component-state cache. A single component can be cleared by passing its ID:
+Or a single component can be cleared by passing its ID:
 
 ```javascript
-window.spaEngine.resetComponentState('booking-controls');
+window.spaEngine.resetComponentState('service-selection');
 ```
 
 ## Tests
 
 Tests run in a browser and use a small custom runner built from browser APIs. This was chosen because the engine depends on browser objects such as `document`, `window`, `DOMParser`, `fetch`, and `history`.
-
-Current test coverage includes:
-
-- Fetching and parsing HTML.
-- Failed HTTP requests.
-- Body replacement.
-- Inline script execution.
-- Route wildcard and exact matching.
-- Query string and hash handling.
-- Literal dot matching in routes.
-- Title changes during navigation.
-- History behavior during `popstate` navigation.
-- Disabled-engine initialization.
-- Loading-bar lifecycle during navigation.
-- Skipping SPA navigation for links with `data-no-spa`.
-- Identifying marked components through `data-spa-component` and shared IDs.
-- Preserving barber and service selections through the booking flow.
-- Preserving and applying the order checkbox state while rendering the service list.
-- Filtering barber options by name.
-- Ordering service options in ascending and descending order.
-- Preserving selected services while ordering.
-- Showing the scheduled state after checkout confirmation.
-- Providing a checkout button to return to the service-selection page.
 
 The test runner groups tests by requirement, restores the test page after each test because rendering tests replace `document.body`, and clears the SPA engine state cache to keep tests isolated. Each test logs `PASS` or `FAIL`, and the runner prints `ALL TESTS PASSED` when the suite succeeds. When one or more tests fail, it throws an aggregate error after logging the individual failures.
 
