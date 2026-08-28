@@ -32,12 +32,11 @@ The exercise requires an SPA engine that:
 - Loading bar that starts during navigation, completes when navigation finishes, and is removed afterward.
 - SPA navigation is skipped for links with the `data-no-spa` attribute.
 - Form state is captured and restored for marked components with matching IDs.
+- Component state can be cleared with `resetComponentState()`.
+- Restored form controls are applied before the next body is rendered.
+- Restored controls dispatch `input` or `change` events so dependent page behavior is updated.
+- Barber selection, service selection, filtering, ordering, and checkout behavior are covered by browser tests.
 - Browser-based tests with a lightweight custom `describe`, `test`, and `assert` runner.
-
-### Remaining
-
-- Expand component state preservation beyond form values.
-- Expand the test suite with additional component and navigation edge cases.
 
 ## Project Structure
 
@@ -49,6 +48,7 @@ spaEngine.css              Loading bar styles
 spaInit.js                 Site-specific engine initialization
 tests/component-page-a.html Component state test page A
 tests/component-page-b.html Component state test page B
+tests/component-page-c.html Checkout and confirmation test page
 tests/spaEngine.test.html  Browser test page
 tests/spaEngine.test.js    Native browser test runner and tests
 .gitignore                 Local-only file exclusions
@@ -156,19 +156,14 @@ The stylesheet is loaded dynamically by the engine, keeping the host-page integr
 Stateful components are marked with `data-spa-component` and must have an `id`:
 
 ```html
-<section id="users-table" data-spa-component>
-  <input id="users-search" type="search" />
+<section id="barber-selection" data-spa-component>
+  <input id="barber-ana" name="barber" type="radio" value="ana" />
 
-  <select id="users-sort">
-    <option value="name">Name</option>
-    <option value="date">Date</option>
-  </select>
-
-  <input id="user-1" type="checkbox" value="1" />
+  <input id="barber-bruno" name="barber" type="radio" value="bruno" />
 </section>
 ```
 
-Before navigation, the engine captures the state of `input`, `textarea`, and `select` elements inside marked components. After replacing the body, it restores that state into a component with the same ID and matching control IDs.
+Before navigation, the engine captures the state of `input`, `textarea`, and `select` elements inside marked components. The state is restored in the detached document before the new body is rendered. This allows page scripts to initialize from the restored values without displaying the component's default state first.
 
 The current implementation preserves:
 
@@ -185,7 +180,26 @@ document.querySelectorAll('[data-spa-component][id]');
 
 The component ID identifies the corresponding component on the next page. The control IDs identify the controls whose values should be restored. Components and controls that are not present on the next page are skipped.
 
-This implementation does not preserve arbitrary JavaScript variables, event listeners, timers, focus, scroll position, or component instances.
+The booking fixtures demonstrate the behavior with a shared order control and page-specific search controls:
+
+```text
+Page A: booking-search-a
+Page B: booking-search-b
+```
+
+Because those search controls have different IDs, the search value starts fresh on Page B. The `booking-order` control uses the same ID on Pages A and B, so its checked state is restored. Barber and service controls use stable IDs so their selections can be displayed on the checkout page.
+
+The engine also exposes a reset method:
+
+```javascript
+window.spaEngine.resetComponentState();
+```
+
+This clears the complete component-state cache. A single component can be cleared by passing its ID:
+
+```javascript
+window.spaEngine.resetComponentState('booking-controls');
+```
 
 ## Tests
 
@@ -206,9 +220,15 @@ Current test coverage includes:
 - Loading-bar lifecycle during navigation.
 - Skipping SPA navigation for links with `data-no-spa`.
 - Identifying marked components through `data-spa-component` and shared IDs.
-- Preserving form values between the component test pages.
+- Preserving barber and service selections through the booking flow.
+- Preserving and applying the order checkbox state while rendering the service list.
+- Filtering barber options by name.
+- Ordering service options in ascending and descending order.
+- Preserving selected services while ordering.
+- Showing the scheduled state after checkout confirmation.
+- Providing a checkout button to return to the service-selection page.
 
-The test runner groups tests by requirement and restores the test page after each test because rendering tests replace `document.body`.
+The test runner groups tests by requirement, restores the test page after each test because rendering tests replace `document.body`, and clears the SPA engine state cache to keep tests isolated.
 
 ## Run Locally
 
