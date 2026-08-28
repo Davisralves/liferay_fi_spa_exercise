@@ -2,11 +2,14 @@ class SpaEngine {
   #routes;
   #enable;
   #state;
+  #components;
 
   constructor(routes = [], enable = true) {
     this.#routes = routes;
     this.#enable = enable;
     this.#state = {};
+    this.#components = new Map();
+
     this.loadStyles();
     this.init();
   }
@@ -136,7 +139,7 @@ class SpaEngine {
 
     stylesheet.id = 'spa-engine-stylesheet';
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = new URL('spaEngine.css', document.currentScript.src);
+    stylesheet.href = new URL('../spaEngine.css', document.currentScript.src);
 
     document.head.appendChild(stylesheet);
   }
@@ -147,6 +150,7 @@ class SpaEngine {
 
   captureComponentState() {
     const state = {};
+
     for (const component of document.querySelectorAll('[data-spa-component][id]')) {
       const controls = {};
 
@@ -165,22 +169,30 @@ class SpaEngine {
           };
         }
       }
-      if (Object.keys(controls).length > 0) {
-        state[component.id] = controls;
+
+      const handlers = this.#components.get(component.id);
+      const customState = handlers?.save(component);
+
+      if (Object.keys(controls).length > 0 || customState !== undefined) {
+        state[component.id] = { form: controls, custom: customState };
       }
     }
+
     this.#state = { ...this.#state, ...state };
+
     return this.#state;
   }
 
   restoreComponentState(nextDocument) {
-    for (const [componentId, controls] of Object.entries(this.#state)) {
+    for (const [componentId, componentState] of Object.entries(this.#state)) {
       const component = nextDocument.querySelector(`[data-spa-component][id="${CSS.escape(componentId)}"]`);
 
       if (!component) continue;
 
-      for (const [controlId, controlState] of Object.entries(controls)) {
-        const control = nextDocument.querySelector(`#${CSS.escape(controlId)}`);
+      const formState = componentState.form || {};
+
+      for (const [controlId, controlState] of Object.entries(formState)) {
+        const control = component.querySelector(`#${CSS.escape(controlId)}`);
 
         if (!control) {
           continue;
@@ -192,6 +204,12 @@ class SpaEngine {
           control.value = controlState.value;
         }
       }
+
+      const handlers = this.#components.get(componentId);
+
+      if (handlers && componentState.custom !== undefined) {
+        handlers.restore(component, componentState.custom);
+      }
     }
   }
 
@@ -201,6 +219,13 @@ class SpaEngine {
     } else {
       delete this.#state[id];
     }
+  }
+
+  registerComponent(id, handlers) {
+    if (!id || typeof handlers?.save !== 'function' || typeof handlers?.restore !== 'function') {
+      throw new Error('Component ID and handlers are required for registration.');
+    }
+    this.#components.set(id, handlers);
   }
 }
 
