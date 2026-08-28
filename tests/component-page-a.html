@@ -3,8 +3,9 @@
 
 <head>
     <title>Barber Shop - Choose a Barber</title>
-    <script src="../spaEngine.js" defer></script>
-    <script src="../spaInit.js" defer></script>
+    <script src="../scripts/spaReady.js"></script>
+    <script src="../scripts/spaEngine.js" defer></script>
+    <script src="../scripts/spaInit.js" defer></script>
 </head>
 
 <body>
@@ -44,7 +45,7 @@
     <a href="component-page-b.html">Choose services</a>
 
     <script>
-        (() => {
+        runAfterPageRendered(() => {
             const search = document.querySelector('#booking-search-a');
             const order = document.querySelector('#booking-order');
             const list = document.querySelector('#barber-selection');
@@ -71,7 +72,7 @@
             search.addEventListener('input', updateList);
             order.addEventListener('change', updateList);
             updateList();
-        })();
+        });
     </script>
 </body>
 

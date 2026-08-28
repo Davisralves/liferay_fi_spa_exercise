@@ -497,6 +497,51 @@ async function runTests() {
       },
       restoreDefaultPage,
     );
+
+    await test(
+      'restores appointment state in the existing service component',
+      async () => {
+        const pageB = await window.spaEngine.getNextDocument('../tests/component-page-b.html');
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(pageB.body, loadingBar);
+
+        document.querySelector('#service-haircut').checked = true;
+        document.querySelector('#service-shave').checked = true;
+        document.querySelector('#appointment-afternoon').checked = true;
+
+        document.querySelector('#service-haircut').dispatchEvent(new Event('change', {bubbles: true}));
+        document.querySelector('#appointment-afternoon').dispatchEvent(new Event('change', {bubbles: true}));
+
+        assert(
+          document.querySelector('#service-summary').textContent === '2 services selected',
+          'service summary should update after selecting services',
+        );
+        assert(
+          document.querySelector('#appointment-summary').textContent === 'Appointment: afternoon',
+          'appointment summary should update after selecting a time',
+        );
+
+        document.querySelector('a[href="component-page-c.html"]').click();
+
+        await waitFor(() => document.querySelector('#confirm-booking') !== null);
+
+        assert(document.querySelector('#service-haircut').checked, 'haircut should remain selected on checkout');
+        assert(document.querySelector('#service-shave').checked, 'shave should remain selected on checkout');
+        assert(
+          document.querySelector('#appointment-afternoon').checked,
+          'appointment time should remain selected on checkout',
+        );
+        assert(
+          document.querySelector('#service-summary').textContent === '2 services selected',
+          'custom state should update the service summary',
+        );
+        assert(
+          document.querySelector('#appointment-summary').textContent === 'Appointment: afternoon',
+          'custom state should update the appointment summary',
+        );
+      },
+      restoreDefaultPage,
+    );
   });
 }
 

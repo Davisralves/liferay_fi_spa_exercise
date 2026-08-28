@@ -3,8 +3,9 @@
 
 <head>
     <title>Barber Shop - Checkout</title>
-    <script src="../spaEngine.js" defer></script>
-    <script src="../spaInit.js" defer></script>
+    <script src="../scripts/spaReady.js"></script>
+    <script src="../scripts/spaEngine.js" defer></script>
+    <script src="../scripts/spaInit.js" defer></script>
 </head>
 
 <body>
@@ -51,6 +52,23 @@
             <input id="service-styling" name="services" type="checkbox" value="styling" disabled>
             Styling
         </label>
+
+        <fieldset>
+            <legend>Appointment time</legend>
+
+            <label>
+                <input id="appointment-morning" name="appointment-time" type="radio" value="morning" disabled>
+                Morning
+            </label>
+
+            <label>
+                <input id="appointment-afternoon" name="appointment-time" type="radio" value="afternoon" disabled>
+                Afternoon
+            </label>
+        </fieldset>
+
+        <p id="service-summary">0 services selected</p>
+        <p id="appointment-summary">No appointment time selected</p>
     </section>
 
     <button id="confirm-booking" type="button">Confirm appointment</button>
@@ -59,19 +77,41 @@
     <button id="back-to-services" type="button">Back to services</button>
 
     <script>
-        (() => {
+        runAfterPageRendered(() => {
             const backButton = document.querySelector('#back-to-services');
             const confirmationButton = document.querySelector('#confirm-booking');
             const confirmationMessage = document.querySelector('#booking-confirmation');
 
             backButton.addEventListener('click', () => {
-                window.spaEngine.navigate('component-page-b.html');
+                window.spaEngine.navigate('../tests/component-page-b.html');
             });
 
             confirmationButton.addEventListener('click', () => {
                 confirmationMessage.hidden = false;
             });
-        })();
+
+            window.spaEngine.registerComponent('service-selection', {
+                save(component) {
+                    return {
+                        selectedServiceCount: component.querySelectorAll(
+                            'input[name="services"]:checked',
+                        ).length,
+                        appointmentTime: component.querySelector(
+                            'input[name="appointment-time"]:checked',
+                        )?.value ?? null,
+                    };
+                },
+
+                restore(component, state) {
+                    component.querySelector('#service-summary').textContent =
+                        `${state.selectedServiceCount} services selected`;
+                    component.querySelector('#appointment-summary').textContent =
+                        state.appointmentTime
+                            ? `Appointment: ${state.appointmentTime}`
+                            : 'No appointment time selected';
+                },
+            });
+        });
     </script>
 </body>
 
