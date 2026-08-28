@@ -17,6 +17,18 @@ function assert(condition, message) {
   }
 }
 
+async function waitFor(condition, timeout = 2000) {
+  const startedAt = Date.now();
+
+  while (!condition()) {
+    if (Date.now() - startedAt >= timeout) {
+      throw new Error('Timed out waiting for condition');
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 25));
+  }
+}
+
 function restoreDefaultPage() {
   document.body.replaceWith(defaultBody.cloneNode(true));
   document.title = defaultTitle;
@@ -314,10 +326,14 @@ async function runTests() {
         window.spaEngine.replaceBody(pageA.body, loadingBar);
 
         document.querySelector('#booking-search-a').value = 'bruno';
+        document.querySelector('#booking-search-a').dispatchEvent(new Event('input', { bubbles: true }));
         document.querySelector('#booking-order').checked = false;
+        document.querySelector('#booking-order').dispatchEvent(new Event('change', { bubbles: true }));
         document.querySelector('#barber-bruno').checked = true;
 
-        await window.spaEngine.navigate('../tests/component-page-b.html', false);
+        document.querySelector('a[href="component-page-b.html"]').click();
+
+        await waitFor(() => document.querySelector('#service-selection') !== null);
 
         assert(document.querySelector('#booking-search-b').value === '', 'search should start empty on Page B');
         assert(
@@ -328,7 +344,9 @@ async function runTests() {
         document.querySelector('#service-haircut').checked = true;
         document.querySelector('#service-shave').checked = true;
 
-        await window.spaEngine.navigate('../tests/component-page-c.html', false);
+        document.querySelector('a[href="component-page-c.html"]').click();
+
+        await waitFor(() => document.querySelector('#confirm-booking') !== null);
 
         assert(document.querySelector('#barber-bruno').checked, 'barber should be preserved on checkout');
         assert(document.querySelector('#service-haircut').checked, 'haircut should be preserved on checkout');
@@ -454,14 +472,10 @@ async function runTests() {
 
         const pageB = await window.spaEngine.getNextDocument('../tests/component-page-b.html');
 
-        const pageBHtml = pageB.body.innerHTML.replaceAll('booking-search-b', 'booking-search-a');
+        pageB.body.innerHTML = pageB.body.innerHTML.replaceAll('booking-search-b', 'booking-search-a');
 
-        const nextBody = document.implementation.createHTMLDocument('').body;
-
-        nextBody.innerHTML = pageBHtml;
-
-        window.spaEngine.replaceBody(nextBody, loadingBar);
-        window.spaEngine.restoreComponentState();
+        window.spaEngine.restoreComponentState(pageB);
+        window.spaEngine.replaceBody(pageB.body, loadingBar);
 
         const matchingService = document.querySelector('[data-filter-item][data-name="Shave"]');
 
