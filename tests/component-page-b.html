@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Barber Shop - Choose Services</title>
+    <script src="../scripts/spaReady.js"></script>
+    <script src="../scripts/spaEngine.js" defer></script>
+    <script src="../scripts/spaInit.js" defer></script>
+</head>
+
+<body>
+    <h1>Choose your services</h1>
+
+    <section data-spa-component id="booking-controls">
+        <label>
+            Search by name
+            <input id="booking-search-b" type="search">
+        </label>
+
+        <label>
+            <input id="booking-order" type="checkbox" checked>
+            Ascending order
+        </label>
+    </section>
+
+    <section id="service-selection" data-spa-component>
+        <h2>Choose one or more services</h2>
+
+        <label data-filter-item data-name="Haircut">
+            <input id="service-haircut" name="services" type="checkbox" value="haircut">
+            Haircut
+        </label>
+
+        <label data-filter-item data-name="Shave">
+            <input id="service-shave" name="services" type="checkbox" value="shave">
+            Shave
+        </label>
+
+        <label data-filter-item data-name="Beard trim">
+            <input id="service-beard-trim" name="services" type="checkbox" value="beard-trim">
+            Beard trim
+        </label>
+
+        <label data-filter-item data-name="Styling">
+            <input id="service-styling" name="services" type="checkbox" value="styling">
+            Styling
+        </label>
+
+        <fieldset>
+            <legend>Choose an appointment time</legend>
+
+            <label>
+                <input id="appointment-morning" name="appointment-time" type="radio" value="morning">
+                Morning
+            </label>
+
+            <label>
+                <input id="appointment-afternoon" name="appointment-time" type="radio" value="afternoon">
+                Afternoon
+            </label>
+        </fieldset>
+
+        <p id="service-summary">0 services selected</p>
+        <p id="appointment-summary">No appointment time selected</p>
+    </section>
+
+    <a href="component-page-a.html">Back to barber selection</a>
+    <a href="component-page-c.html">Continue to checkout</a>
+
+    <script>
+        runAfterPageRendered(() => {
+            const search = document.querySelector('#booking-search-b');
+            const order = document.querySelector('#booking-order');
+            const list = document.querySelector('#service-selection');
+            const items = [...list.querySelectorAll('[data-filter-item]')];
+            const defaultAppointmentTime = 'morning';
+
+            function updateList() {
+                const query = search.value.trim().toLowerCase();
+
+                items
+                    .sort((firstItem, secondItem) => {
+                        const firstName = firstItem.dataset.name;
+                        const secondName = secondItem.dataset.name;
+
+                        return order.checked
+                            ? firstName.localeCompare(secondName)
+                            : secondName.localeCompare(firstName);
+                    })
+                    .forEach((item) => {
+                        item.hidden = !item.dataset.name
+                            .toLowerCase()
+                            .includes(query);
+
+                        list.append(item);
+                    });
+            }
+
+            search.addEventListener('input', updateList);
+            order.addEventListener('change', updateList);
+            updateList();
+
+            window.spaEngine.registerComponent('service-selection', {
+                save(component) {
+                    return {
+                        selectedServiceCount: component.querySelectorAll(
+                            'input[name="services"]:checked',
+                        ).length,
+                        appointmentTime:
+                            component.querySelector(
+                                'input[name="appointment-time"]:checked',
+                            )?.value ?? defaultAppointmentTime,
+                    };
+                },
+
+                restore(component, state) {
+                    component.querySelector('#service-summary').textContent =
+                        `${state.selectedServiceCount} services selected`;
+
+                    component.querySelector('#appointment-summary').textContent =
+                        state.appointmentTime
+                            ? `Appointment: ${state.appointmentTime}`
+                            : `Appointment: ${defaultAppointmentTime}`;
+                },
+            });
+
+            function updateComponentState() {
+                const selectedServicesNumber = list.querySelectorAll(
+                    'input[name="services"]:checked',
+                ).length;
+
+                const selectedAppointment = list.querySelector(
+                    'input[name="appointment-time"]:checked',
+                );
+
+                list.querySelector('#service-summary').textContent =
+                    `${selectedServicesNumber} services selected`;
+
+                list.querySelector('#appointment-summary').textContent =
+                    selectedAppointment
+                        ? `Appointment: ${selectedAppointment.value}`
+                        : 'No appointment time selected';
+
+                window.spaEngine.captureComponentState();
+            }
+
+            list.addEventListener('change', updateComponentState);
+            updateComponentState();
+        });
+    </script>
+</body>
+
+</html>
