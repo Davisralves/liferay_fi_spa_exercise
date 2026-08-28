@@ -406,7 +406,70 @@ async function runTests() {
   });
 
   await describe('Component state preservation', async () => {
-    // Tests for saving and restoring state by component ID.
+    await test(
+      'identifies marked components on both pages',
+      async () => {
+        const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
+
+        const pageB = await window.spaEngine.getNextDocument('../tests/component-page-b.html');
+
+        const componentA = pageA.querySelector('[data-spa-component][id="users-table"]');
+
+        const componentB = pageB.querySelector('[data-spa-component][id="users-table"]');
+
+        assert(componentA !== null, 'Page A should contain the marked component');
+        assert(componentB !== null, 'Page B should contain the marked component');
+        assert(componentA.id === componentB.id, 'the component should have the same ID on both pages');
+      },
+      restoreDefaultPage,
+    );
+
+    await test(
+      'preserves form values for a marked component',
+      async () => {
+        const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
+
+        const loadingBar = window.spaEngine.insertLoadingBar();
+
+        window.spaEngine.replaceBody(pageA.body, loadingBar);
+
+        const componentA = document.querySelector('#users-table');
+
+        componentA.querySelector('#users-search').value = 'ana';
+        componentA.querySelector('#users-sort').value = 'date';
+        componentA.querySelector('#user-1').checked = true;
+
+        await window.spaEngine.navigate('../tests/component-page-b.html', false);
+
+        const componentB = document.querySelector('#users-table');
+
+        assert(componentB !== null, 'Page B should contain #users-table');
+
+        assert(componentB.querySelector('#users-search').value === 'ana', 'search value should be preserved');
+
+        assert(componentB.querySelector('#users-sort').value === 'date', 'sort value should be preserved');
+
+        assert(componentB.querySelector('#user-1').checked === true, 'checkbox state should be preserved');
+      },
+      restoreDefaultPage,
+    );
+
+    await test(
+      'does not capture controls outside marked components',
+      () => {
+        const input = document.createElement('input');
+
+        input.id = 'unmarked-input';
+        input.value = 'should not be saved';
+
+        document.body.append(input);
+
+        const state = window.spaEngine.captureComponentState();
+
+        assert(state['unmarked-input'] === undefined, 'unmarked controls should not be treated as components');
+      },
+      restoreDefaultPage,
+    );
   });
 }
 

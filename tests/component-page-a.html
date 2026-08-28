@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Component State - Page A</title>
+    <script src="../spaEngine.js" defer></script>
+    <script src="../spaInit.js" defer></script>
+</head>
+
+<body>
+    <h1>Users - Page A</h1>
+
+    <section id="users-table" data-spa-component>
+        <div class="toolbar">
+            <label>
+                Search
+                <input id="users-search" type="search">
+            </label>
+
+            <label>
+                Sort
+                <select id="users-sort">
+                    <option value="name">Name</option>
+                    <option value="date">Date</option>
+                </select>
+            </label>
+
+            <button id="next-page" type="button">Next page</button>
+        </div>
+
+        <p id="users-status">No users selected</p>
+
+        <table>
+            <tbody>
+                <tr>
+                    <td><input id="user-1" type="checkbox" value="1"></td>
+                    <td>Ana</td>
+                </tr>
+                <tr>
+                    <td><input id="user-2" type="checkbox" value="2"></td>
+                    <td>Bruno</td>
+                </tr>
+                <tr>
+                    <td><input id="user-3" type="checkbox" value="3"></td>
+                    <td>Carla</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <a href="component-page-b.html">Go to Page B</a>
+
+    <script>
+        (() => {
+            const table = document.querySelector('#users-table');
+            const search = document.querySelector('#users-search');
+            const sort = document.querySelector('#users-sort');
+            const status = document.querySelector('#users-status');
+
+            function updateStatus() {
+                const selected = table.querySelectorAll(
+                    'input[type="checkbox"]:checked',
+                ).length;
+
+                status.textContent = `${selected} users selected`;
+            }
+
+            table.addEventListener('change', updateStatus);
+            search.addEventListener('input', updateStatus);
+            sort.addEventListener('change', updateStatus);
+        })();
+    </script>
+</body>
+
+</html>
