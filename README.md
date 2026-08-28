@@ -30,13 +30,14 @@ The exercise requires an SPA engine that:
 - Configurable wildcard route matching.
 - Configurable enabled/disabled engine behavior.
 - Loading bar that starts during navigation, completes when navigation finishes, and is removed afterward.
+- SPA navigation is skipped for links with the `data-no-spa` attribute.
+- Form state is captured and restored for marked components with matching IDs.
 - Browser-based tests with a lightweight custom `describe`, `test`, and `assert` runner.
 
 ### Remaining
 
-- Skip SPA navigation for links that declare `data-no-spa`.
-- Design and implement component state caching and restoration by component ID.
-- Expand the test suite for the remaining features and edge cases.
+- Expand component state preservation beyond form values.
+- Expand the test suite with additional component and navigation edge cases.
 
 ## Project Structure
 
@@ -46,6 +47,8 @@ details.html               Page loaded through SPA navigation
 spaEngine.js               Reusable SPA engine
 spaEngine.css              Loading bar styles
 spaInit.js                 Site-specific engine initialization
+tests/component-page-a.html Component state test page A
+tests/component-page-b.html Component state test page B
 tests/spaEngine.test.html  Browser test page
 tests/spaEngine.test.js    Native browser test runner and tests
 .gitignore                 Local-only file exclusions
@@ -148,6 +151,42 @@ The loading bar is inserted before navigation. When new content is rendered, the
 
 The stylesheet is loaded dynamically by the engine, keeping the host-page integration limited to the two JavaScript files.
 
+### Preserve component form values
+
+Stateful components are marked with `data-spa-component` and must have an `id`:
+
+```html
+<section id="users-table" data-spa-component>
+  <input id="users-search" type="search" />
+
+  <select id="users-sort">
+    <option value="name">Name</option>
+    <option value="date">Date</option>
+  </select>
+
+  <input id="user-1" type="checkbox" value="1" />
+</section>
+```
+
+Before navigation, the engine captures the state of `input`, `textarea`, and `select` elements inside marked components. After replacing the body, it restores that state into a component with the same ID and matching control IDs.
+
+The current implementation preserves:
+
+- Text and search input values.
+- `textarea` values.
+- Selected `option` values.
+- Checkbox and radio-button state.
+
+Only marked components are captured:
+
+```javascript
+document.querySelectorAll('[data-spa-component][id]');
+```
+
+The component ID identifies the corresponding component on the next page. The control IDs identify the controls whose values should be restored. Components and controls that are not present on the next page are skipped.
+
+This implementation does not preserve arbitrary JavaScript variables, event listeners, timers, focus, scroll position, or component instances.
+
 ## Tests
 
 Tests run in a browser and use a small custom runner built from browser APIs. This was chosen because the engine depends on browser objects such as `document`, `window`, `DOMParser`, `fetch`, and `history`.
@@ -165,6 +204,9 @@ Current test coverage includes:
 - History behavior during `popstate` navigation.
 - Disabled-engine initialization.
 - Loading-bar lifecycle during navigation.
+- Skipping SPA navigation for links with `data-no-spa`.
+- Identifying marked components through `data-spa-component` and shared IDs.
+- Preserving form values between the component test pages.
 
 The test runner groups tests by requirement and restores the test page after each test because rendering tests replace `document.body`.
 
@@ -189,7 +231,3 @@ http://localhost:8000/tests/spaEngine.test.html
 ```
 
 The tests use green `PASS` console messages and error output for failures.
-
-## Next Steps
-
-The next implementation items are `data-no-spa` support and a component state preservation API. The README will be updated when those requirements are implemented.
