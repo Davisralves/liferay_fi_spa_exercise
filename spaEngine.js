@@ -188,8 +188,10 @@ class SpaEngine {
 
         if (control.type === 'checkbox' || control.type === 'radio') {
           control.checked = controlState.checked;
+          control.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
           control.value = controlState.value;
+          control.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
     }

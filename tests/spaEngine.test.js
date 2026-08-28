@@ -414,6 +414,75 @@ async function runTests() {
       },
       restoreDefaultPage,
     );
+    await test(
+      'applies the restored order to the service list',
+      async () => {
+        const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
+
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(pageA.body, loadingBar);
+
+        document.querySelector('#booking-order').checked = false;
+
+        await window.spaEngine.navigate('../tests/component-page-b.html', false);
+
+        const serviceNames = [...document.querySelectorAll('#service-selection [data-filter-item]')].map(
+          (item) => item.dataset.name,
+        );
+
+        assert(
+          JSON.stringify(serviceNames) === JSON.stringify(['Styling', 'Shave', 'Haircut', 'Beard trim']),
+          'services should be ordered descending after restoring the order state',
+        );
+      },
+      restoreDefaultPage,
+    );
+
+    await test(
+      'restores a shared search value and applies the filter',
+      async () => {
+        const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
+
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(pageA.body, loadingBar);
+
+        const search = document.querySelector('#booking-search-a');
+
+        search.value = 'shav';
+
+        window.spaEngine.captureComponentState();
+
+        const pageB = await window.spaEngine.getNextDocument('../tests/component-page-b.html');
+
+        const pageBHtml = pageB.body.innerHTML.replaceAll('booking-search-b', 'booking-search-a');
+
+        const nextBody = document.implementation.createHTMLDocument('').body;
+
+        nextBody.innerHTML = pageBHtml;
+
+        window.spaEngine.replaceBody(nextBody, loadingBar);
+        window.spaEngine.restoreComponentState();
+
+        const matchingService = document.querySelector('[data-filter-item][data-name="Shave"]');
+
+        const nonMatchingServices = [...document.querySelectorAll('#service-selection [data-filter-item]')].filter(
+          (item) => item.dataset.name !== 'Shave',
+        );
+
+        assert(
+          document.querySelector('#booking-search-a').value === 'shav',
+          'the shared search value should be restored',
+        );
+
+        assert(matchingService.hidden === false, 'the matching service should remain visible');
+
+        assert(
+          nonMatchingServices.every((item) => item.hidden),
+          'non-matching services should be hidden',
+        );
+      },
+      restoreDefaultPage,
+    );
   });
 }
 
