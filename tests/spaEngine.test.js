@@ -1,6 +1,7 @@
 const defaultBody = document.body.cloneNode(true);
 const defaultTitle = document.title;
 const defaultUrl = window.location.href;
+let failedTests = 0;
 
 async function describe(name, callback) {
   console.group(name);
@@ -41,6 +42,7 @@ async function test(name, callback, finallyCallback) {
     await callback();
     console.log(`%cPASS: ${name}`, 'color: green; font-weight: bold;');
   } catch (error) {
+    failedTests += 1;
     console.error(`FAIL: ${name}`, error);
   } finally {
     finallyCallback?.();
@@ -592,6 +594,12 @@ async function runTests() {
       restoreDefaultPage,
     );
   });
+
+  if (failedTests === 0) {
+    console.log('%cALL TESTS PASSED', 'color: green; font-weight: bold;');
+  } else {
+    throw new Error(`${failedTests} test(s) failed`);
+  }
 }
 
 runTests();

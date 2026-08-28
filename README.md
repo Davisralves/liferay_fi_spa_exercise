@@ -50,6 +50,8 @@ scripts/spaReady.js        Page initialization readiness helper
 tests/component-page-a.html Component state test page A
 tests/component-page-b.html Component state test page B
 tests/component-page-c.html Checkout and confirmation test page
+tests/external-script-page.html External script test page
+tests/external-script.js      External script test fixture
 tests/spaEngine.test.html  Browser test page
 tests/spaEngine.test.js    Native browser test runner and tests
 .gitignore                 Local-only file exclusions
@@ -230,7 +232,7 @@ Current test coverage includes:
 - Showing the scheduled state after checkout confirmation.
 - Providing a checkout button to return to the service-selection page.
 
-The test runner groups tests by requirement, restores the test page after each test because rendering tests replace `document.body`, and clears the SPA engine state cache to keep tests isolated.
+The test runner groups tests by requirement, restores the test page after each test because rendering tests replace `document.body`, and clears the SPA engine state cache to keep tests isolated. Each test logs `PASS` or `FAIL`, and the runner prints `ALL TESTS PASSED` when the suite succeeds. When one or more tests fail, it throws an aggregate error after logging the individual failures.
 
 ## Run Locally
 
