@@ -194,6 +194,14 @@ class SpaEngine {
       }
     }
   }
+
+  resetComponentState(id) {
+    if (!id) {
+      this.#state = {};
+    } else {
+      delete this.#state[id];
+    }
+  }
 }
 
 window.SpaEngine = SpaEngine;
