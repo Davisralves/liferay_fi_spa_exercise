@@ -280,10 +280,11 @@ Serve the project through a local HTTP server. Opening the files with a `file://
 python -m http.server 8000
 ```
 
-Open the demo:
+Open the demos:
 
 ```text
 http://localhost:8000/index.html
+http://localhost:8000/tests/component-page-a.html
 ```
 
 Open the browser tests and inspect the DevTools console:
