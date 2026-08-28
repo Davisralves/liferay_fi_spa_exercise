@@ -1,10 +1,12 @@
 class SpaEngine {
   #routes;
   #enable;
+  #state;
 
   constructor(routes = [], enable = true) {
     this.#routes = routes;
     this.#enable = enable;
+    this.#state = {};
     this.loadStyles();
     this.init();
   }
@@ -47,12 +49,15 @@ class SpaEngine {
 
   async navigate(url, updateHistory = true) {
     const loadingBar = this.insertLoadingBar();
+    this.captureComponentState();
     try {
       await this.delay(500); // Simulate a delay for demonstration purposes
 
       const nextDocument = await this.getNextDocument(url);
 
       this.replaceBody(nextDocument.body, loadingBar);
+      this.restoreComponentState();
+
       document.title = nextDocument.title;
 
       if (updateHistory) {
@@ -138,6 +143,56 @@ class SpaEngine {
 
   delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  captureComponentState() {
+    const state = {};
+    for (const component of document.querySelectorAll('[data-spa-component][id]')) {
+      const controls = {};
+
+      for (const control of component.querySelectorAll('input, textarea, select')) {
+        const key = control.id || control.name;
+
+        if (!key) continue;
+
+        if (control.type === 'checkbox' || control.type === 'radio') {
+          controls[key] = {
+            checked: control.checked,
+          };
+        } else {
+          controls[key] = {
+            value: control.value,
+          };
+        }
+      }
+      if (Object.keys(controls).length > 0) {
+        state[component.id] = controls;
+      }
+    }
+    this.#state = { ...this.#state, ...state };
+    return this.#state;
+  }
+
+  restoreComponentState() {
+    for (const [componentId, controls] of Object.entries(this.#state)) {
+      const component = document.getElementById(componentId);
+
+      if (!component) continue;
+
+      for (const [controlId, controlState] of Object.entries(controls)) {
+        const control = component.querySelector(`#${CSS.escape(controlId)}`);
+
+        if (!control) {
+          continue;
+        }
+
+        if (control.type === 'checkbox' || control.type === 'radio') {
+          control.checked = controlState.checked;
+        } else {
+          control.value = controlState.value;
+        }
+      }
+    }
   }
 }
 
