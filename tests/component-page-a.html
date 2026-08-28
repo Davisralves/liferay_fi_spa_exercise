@@ -1,73 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Component State - Page A</title>
+    <title>Barber Shop - Choose a Barber</title>
     <script src="../spaEngine.js" defer></script>
     <script src="../spaInit.js" defer></script>
 </head>
 
 <body>
-    <h1>Users - Page A</h1>
+    <h1>Barber Shop</h1>
 
-    <section id="users-table" data-spa-component>
-        <div class="toolbar">
-            <label>
-                Search
-                <input id="users-search" type="search">
-            </label>
+    <section data-spa-component id="booking-controls">
+        <label>
+            Search by name
+            <input id="booking-search-a" type="search">
+        </label>
 
-            <label>
-                Sort
-                <select id="users-sort">
-                    <option value="name">Name</option>
-                    <option value="date">Date</option>
-                </select>
-            </label>
-
-            <button id="next-page" type="button">Next page</button>
-        </div>
-
-        <p id="users-status">No users selected</p>
-
-        <table>
-            <tbody>
-                <tr>
-                    <td><input id="user-1" type="checkbox" value="1"></td>
-                    <td>Ana</td>
-                </tr>
-                <tr>
-                    <td><input id="user-2" type="checkbox" value="2"></td>
-                    <td>Bruno</td>
-                </tr>
-                <tr>
-                    <td><input id="user-3" type="checkbox" value="3"></td>
-                    <td>Carla</td>
-                </tr>
-            </tbody>
-        </table>
+        <label>
+            <input id="booking-order" type="checkbox" checked>
+            Ascending order
+        </label>
     </section>
 
-    <a href="component-page-b.html">Go to Page B</a>
+    <section id="barber-selection" data-spa-component>
+        <h2>Choose your barber</h2>
+
+        <label data-filter-item data-name="Ana">
+            <input id="barber-ana" name="barber" type="radio" value="ana">
+            Ana
+        </label>
+
+        <label data-filter-item data-name="Bruno">
+            <input id="barber-bruno" name="barber" type="radio" value="bruno">
+            Bruno
+        </label>
+
+        <label data-filter-item data-name="Carla">
+            <input id="barber-carla" name="barber" type="radio" value="carla">
+            Carla
+        </label>
+    </section>
+
+    <a href="component-page-b.html">Choose services</a>
 
     <script>
         (() => {
-            const table = document.querySelector('#users-table');
-            const search = document.querySelector('#users-search');
-            const sort = document.querySelector('#users-sort');
-            const status = document.querySelector('#users-status');
+            const search = document.querySelector('#booking-search-a');
+            const order = document.querySelector('#booking-order');
+            const list = document.querySelector('#barber-selection');
+            const items = [...list.querySelectorAll('[data-filter-item]')];
 
-            function updateStatus() {
-                const selected = table.querySelectorAll(
-                    'input[type="checkbox"]:checked',
-                ).length;
+            function updateList() {
+                const query = search.value.trim().toLowerCase();
 
-                status.textContent = `${selected} users selected`;
+                items
+                    .sort((firstItem, secondItem) => {
+                        const firstName = firstItem.dataset.name;
+                        const secondName = secondItem.dataset.name;
+
+                        return order.checked
+                            ? firstName.localeCompare(secondName)
+                            : secondName.localeCompare(firstName);
+                    })
+                    .forEach((item) => {
+                        item.hidden = !item.dataset.name.toLowerCase().includes(query);
+                        list.append(item);
+                    });
             }
 
-            table.addEventListener('change', updateStatus);
-            search.addEventListener('input', updateStatus);
-            sort.addEventListener('change', updateStatus);
+            search.addEventListener('input', updateList);
+            order.addEventListener('change', updateList);
+            updateList();
         })();
     </script>
 </body>

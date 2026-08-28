@@ -1,73 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Component State - Page B</title>
+    <title>Barber Shop - Choose Services</title>
     <script src="../spaEngine.js" defer></script>
     <script src="../spaInit.js" defer></script>
 </head>
 
 <body>
-    <h1>Users - Page B</h1>
+    <h1>Choose your services</h1>
 
-    <section id="users-table" data-spa-component>
-        <div class="toolbar">
-            <label>
-                Search
-                <input id="users-search" type="search">
-            </label>
+    <section data-spa-component id="booking-controls">
+        <label>
+            Search by name
+            <input id="booking-search-b" type="search">
+        </label>
 
-            <label>
-                Sort
-                <select id="users-sort">
-                    <option value="name">Name</option>
-                    <option value="date">Date</option>
-                </select>
-            </label>
-
-            <button id="next-page" type="button">Next page</button>
-        </div>
-
-        <p id="users-status">No users selected</p>
-
-        <table>
-            <tbody>
-                <tr>
-                    <td><input id="user-1" type="checkbox" value="1"></td>
-                    <td>Daniel</td>
-                </tr>
-                <tr>
-                    <td><input id="user-2" type="checkbox" value="2"></td>
-                    <td>Eva</td>
-                </tr>
-                <tr>
-                    <td><input id="user-3" type="checkbox" value="3"></td>
-                    <td>Felipe</td>
-                </tr>
-            </tbody>
-        </table>
+        <label>
+            <input id="booking-order" type="checkbox" checked>
+            Ascending order
+        </label>
     </section>
 
-    <a href="component-page-a.html">Go to Page A</a>
+    <section id="service-selection" data-spa-component>
+        <h2>Choose one or more services</h2>
+
+        <label data-filter-item data-name="Haircut">
+            <input id="service-haircut" name="services" type="checkbox" value="haircut">
+            Haircut
+        </label>
+
+        <label data-filter-item data-name="Shave">
+            <input id="service-shave" name="services" type="checkbox" value="shave">
+            Shave
+        </label>
+
+        <label data-filter-item data-name="Beard trim">
+            <input id="service-beard-trim" name="services" type="checkbox" value="beard-trim">
+            Beard trim
+        </label>
+
+        <label data-filter-item data-name="Styling">
+            <input id="service-styling" name="services" type="checkbox" value="styling">
+            Styling
+        </label>
+    </section>
+
+    <a href="component-page-a.html">Back to barber selection</a>
+    <a href="component-page-c.html">Continue to checkout</a>
 
     <script>
         (() => {
-            const table = document.querySelector('#users-table');
-            const search = document.querySelector('#users-search');
-            const sort = document.querySelector('#users-sort');
-            const status = document.querySelector('#users-status');
+            const search = document.querySelector('#booking-search-b');
+            const order = document.querySelector('#booking-order');
+            const list = document.querySelector('#service-selection');
+            const items = [...list.querySelectorAll('[data-filter-item]')];
 
-            function updateStatus() {
-                const selected = table.querySelectorAll(
-                    'input[type="checkbox"]:checked',
-                ).length;
+            function updateList() {
+                const query = search.value.trim().toLowerCase();
 
-                status.textContent = `${selected} users selected`;
+                items
+                    .sort((firstItem, secondItem) => {
+                        const firstName = firstItem.dataset.name;
+                        const secondName = secondItem.dataset.name;
+
+                        return order.checked
+                            ? firstName.localeCompare(secondName)
+                            : secondName.localeCompare(firstName);
+                    })
+                    .forEach((item) => {
+                        item.hidden = !item.dataset.name.toLowerCase().includes(query);
+                        list.append(item);
+                    });
             }
 
-            table.addEventListener('change', updateStatus);
-            search.addEventListener('input', updateStatus);
-            sort.addEventListener('change', updateStatus);
+            search.addEventListener('input', updateList);
+            order.addEventListener('change', updateList);
+            updateList();
         })();
     </script>
 </body>

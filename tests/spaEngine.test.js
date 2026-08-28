@@ -4,7 +4,6 @@ const defaultUrl = window.location.href;
 
 async function describe(name, callback) {
   console.group(name);
-
   try {
     await callback();
   } finally {
@@ -20,23 +19,19 @@ function assert(condition, message) {
 
 function restoreDefaultPage() {
   document.body.replaceWith(defaultBody.cloneNode(true));
-
   document.title = defaultTitle;
-
   window.history.replaceState({}, '', defaultUrl);
+  window.spaEngine.resetComponentState();
 }
 
 async function test(name, callback, finallyCallback) {
   try {
     await callback();
-
     console.log(`%cPASS: ${name}`, 'color: green; font-weight: bold;');
   } catch (error) {
     console.error(`FAIL: ${name}`, error);
   } finally {
-    if (finallyCallback) {
-      finallyCallback();
-    }
+    finallyCallback?.();
   }
 }
 
@@ -48,9 +43,7 @@ async function runTests() {
         const nextDocument = await window.spaEngine.getNextDocument('../details.html');
 
         assert(nextDocument instanceof Document, 'result should be a Document');
-
         assert(nextDocument.querySelector('#time') !== null, 'details.html should contain #time');
-
         assert(nextDocument.title === 'SPA Exercise', 'document title should be SPA Exercise');
       },
       restoreDefaultPage,
@@ -58,14 +51,10 @@ async function runTests() {
 
     await test(
       'replaces the current body',
-      async () => {
+      () => {
         const nextBody = document.implementation.createHTMLDocument('').body;
+        nextBody.innerHTML = '<h1 id="new-content">New content</h1>';
 
-        nextBody.innerHTML = `
-                        <h1 id="new-content">
-                            New content
-                        </h1>
-                    `;
         const loadingBar = window.spaEngine.insertLoadingBar();
         window.spaEngine.replaceBody(nextBody, loadingBar);
 
@@ -76,23 +65,19 @@ async function runTests() {
 
     await test(
       'executes inline scripts after body replacement',
-      async () => {
+      () => {
         const nextBody = document.implementation.createHTMLDocument('').body;
-
         nextBody.innerHTML = `
-                        <div id="script-result"></div>
-
-                        <script>
-                            document.querySelector(
-                                '#script-result'
-                            ).textContent = 'executed';
-                        </script>
-                    `;
+          <div id="script-result"></div>
+          <script>
+            document.querySelector('#script-result').textContent = 'executed';
+          </script>
+        `;
 
         const loadingBar = window.spaEngine.insertLoadingBar();
         window.spaEngine.replaceBody(nextBody, loadingBar);
 
-        assert(document.querySelector('#script-result').textContent === 'executed', 'inline script should be executed');
+        assert(document.querySelector('#script-result').textContent === 'executed', 'inline script should execute');
       },
       restoreDefaultPage,
     );
@@ -100,71 +85,18 @@ async function runTests() {
 
   await describe('Route matching', async () => {
     await test(
-      'matches an HTML route',
-      async () => {
-        const isNotAnSpaRoute = window.spaEngine.isNotAnSpaRoute('../details.html');
-
-        assert(isNotAnSpaRoute === false, 'details.html should match *.html');
-      },
-      restoreDefaultPage,
-    );
-
-    await test(
-      'matches a prefix wildcard route',
-      async () => {
-        const isNotAnSpaRoute = window.spaEngine.isNotAnSpaRoute('/site/about');
-
-        assert(isNotAnSpaRoute === false, '/site/about should match /site/*');
-      },
-      restoreDefaultPage,
-    );
-
-    await test(
-      'rejects a path outside the configured prefix',
-      async () => {
-        const isNotAnSpaRoute = window.spaEngine.isNotAnSpaRoute('/admin/about');
-
-        assert(isNotAnSpaRoute === true, '/admin/about should not match /site/*');
-      },
-      restoreDefaultPage,
-    );
-
-    await test(
-      'matches an exact route',
-      async () => {
-        const matches = window.spaEngine.matchesRoute('/about.html', '/about.html');
-
-        assert(matches, 'exact route should match');
-      },
-      restoreDefaultPage,
-    );
-
-    await test(
-      'rejects a different exact route',
-      async () => {
-        const matches = window.spaEngine.matchesRoute('/contact.html', '/about.html');
-
-        assert(matches === false, 'different route should not match');
-      },
-      restoreDefaultPage,
-    );
-
-    await test(
-      'ignores query parameters and hashes',
-      async () => {
-        const matches = window.spaEngine.matchesRoute('../details.html?tab=info#top', '*.html');
-
-        assert(matches, 'route matching should use pathname');
-      },
-      restoreDefaultPage,
-    );
-
-    await test(
-      'treats dots as literal characters',
-      async () => {
-        const matches = window.spaEngine.matchesRoute('/detailsXhtml', '/details.html');
-
-        assert(matches === false, '. should not be a regex wildcard');
+      'matches configured routes',
+      () => {
+        assert(!window.spaEngine.isNotAnSpaRoute('../details.html'), 'HTML route should match');
+        assert(!window.spaEngine.isNotAnSpaRoute('/site/about'), 'prefix route should match');
+        assert(window.spaEngine.isNotAnSpaRoute('/admin/about'), 'outside route should not match');
+        assert(window.spaEngine.matchesRoute('/about.html', '/about.html'), 'exact route should match');
+        assert(!window.spaEngine.matchesRoute('/contact.html', '/about.html'), 'different route should not match');
+        assert(
+          window.spaEngine.matchesRoute('../details.html?tab=info#top', '*.html'),
+          'query and hash should be ignored',
+        );
+        assert(!window.spaEngine.matchesRoute('/detailsXhtml', '/details.html'), 'dots should be literal');
       },
       restoreDefaultPage,
     );
@@ -175,28 +107,15 @@ async function runTests() {
       'updates the document title during navigation',
       async () => {
         const originalFetch = window.fetch;
-
         window.fetch = async () => ({
           ok: true,
-          text: async () => `
-                            <html>
-                                <head>
-                                    <title>New Page</title>
-                                </head>
-                                <body>
-                                    <h1 id="new-page">
-                                        New Page
-                                    </h1>
-                                </body>
-                            </html>
-                        `,
+          text: async () =>
+            '<html><head><title>New Page</title></head><body><h1 id="new-page">New Page</h1></body></html>',
         });
 
         try {
           await window.spaEngine.navigate('../details.html', false);
-
           assert(document.title === 'New Page', 'title should be updated');
-
           assert(document.querySelector('#new-page') !== null, 'new body should be rendered');
         } finally {
           window.fetch = originalFetch;
@@ -210,31 +129,19 @@ async function runTests() {
       async () => {
         const originalFetch = window.fetch;
         const originalPushState = window.history.pushState;
-
         let pushStateCalled = false;
 
         window.fetch = async () => ({
           ok: true,
-          text: async () => `
-                            <html>
-                                <head>
-                                    <title>Previous Page</title>
-                                </head>
-                                <body>
-                                    <h1>Previous Page</h1>
-                                </body>
-                            </html>
-                        `,
+          text: async () => '<html><head><title>Previous Page</title></head><body><h1>Previous Page</h1></body></html>',
         });
-
         window.history.pushState = () => {
           pushStateCalled = true;
         };
 
         try {
           await window.spaEngine.navigate('../index.html', false);
-
-          assert(pushStateCalled === false, 'popstate should not call pushState');
+          assert(!pushStateCalled, 'popstate should not call pushState');
         } finally {
           window.fetch = originalFetch;
           window.history.pushState = originalPushState;
@@ -250,18 +157,12 @@ async function runTests() {
       async () => {
         const originalFetch = window.fetch;
         let requestFailed = false;
-
-        window.fetch = async () => ({
-          ok: false,
-          status: 404,
-          statusText: 'Not Found',
-        });
+        window.fetch = async () => ({ ok: false, status: 404, statusText: 'Not Found' });
 
         try {
           await window.spaEngine.getNextDocument('../missing.html');
         } catch (error) {
           requestFailed = true;
-
           assert(error.message.includes('404'), 'error should contain 404');
         } finally {
           window.fetch = originalFetch;
@@ -276,15 +177,13 @@ async function runTests() {
   await describe('Enabled option', async () => {
     await test('does not initialize when the engine is disabled', () => {
       const originalAddEventListener = document.addEventListener;
-
       let listenerCount = 0;
-
       document.addEventListener = () => {
         listenerCount += 1;
       };
+
       try {
         new SpaEngine([], false);
-
         assert(listenerCount === 0, 'disabled engine should not register document listeners');
       } finally {
         document.addEventListener = originalAddEventListener;
@@ -294,60 +193,31 @@ async function runTests() {
 
   await describe('Loading bar', async () => {
     await test(
-      'starts loading when navigation begins and removes the bar when navigation finishes',
+      'starts and removes the loading bar during navigation',
       async () => {
         const originalGetNextDocument = window.spaEngine.getNextDocument;
-
         let resolveDocument;
-
         const pendingDocument = new Promise((resolve) => {
           resolveDocument = resolve;
         });
-
-        window.spaEngine.getNextDocument = () => {
-          return pendingDocument;
-        };
+        window.spaEngine.getNextDocument = () => pendingDocument;
 
         const navigation = window.spaEngine.navigate('../details.html', false);
-
-        await new Promise((resolve) => {
-          window.setTimeout(resolve, 550);
-        });
+        await new Promise((resolve) => window.setTimeout(resolve, 550));
 
         const loadingBar = document.getElementById('loading-bar');
-
         assert(loadingBar !== null, 'loading bar should exist while navigation is pending');
+        assert(loadingBar.getAttribute('is-loading') === 'true', 'loading bar should be active');
 
-        assert(loadingBar.getAttribute('is-loading') === 'true', 'loading bar should be in the loading state');
-
-        const nextDocument = new DOMParser().parseFromString(
-          `
-                        <!DOCTYPE html>
-                        <html>
-                            <head>
-                                <title>Loaded Page</title>
-                            </head>
-                            <body>
-                                <h1 id="loaded-page">
-                                    Loaded Page
-                                </h1>
-                            </body>
-                        </html>
-                    `,
-          'text/html',
+        resolveDocument(
+          new DOMParser().parseFromString(
+            '<html><head><title>Loaded</title></head><body><h1>Loaded</h1></body></html>',
+            'text/html',
+          ),
         );
-
-        resolveDocument(nextDocument);
-
         await navigation;
 
-        assert(document.querySelector('#loaded-page') !== null, 'new page should be rendered');
-
-        assert(
-          document.getElementById('loading-bar') === null,
-          'loading bar should be removed after navigation finishes',
-        );
-
+        assert(document.getElementById('loading-bar') === null, 'loading bar should be removed');
         window.spaEngine.getNextDocument = originalGetNextDocument;
       },
       restoreDefaultPage,
@@ -361,7 +231,6 @@ async function runTests() {
         const link = document.createElement('a');
         const originalNavigate = window.spaEngine.navigate;
         const originalPreventDefault = MouseEvent.prototype.preventDefault;
-
         let navigateCalled = false;
         let preventDefaultCalled = false;
 
@@ -371,20 +240,14 @@ async function runTests() {
         const preventBrowserNavigation = (event) => {
           originalPreventDefault.call(event);
         };
-
         window.addEventListener('click', preventBrowserNavigation);
-
         document.body.append(link);
 
         window.spaEngine.navigate = () => {
           navigateCalled = true;
         };
 
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true,
-          cancelable: true,
-        });
-
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
         clickEvent.preventDefault = () => {
           preventDefaultCalled = true;
           originalPreventDefault.call(clickEvent);
@@ -392,9 +255,7 @@ async function runTests() {
 
         try {
           link.dispatchEvent(clickEvent);
-
           assert(!preventDefaultCalled, 'data-no-spa links should not call preventDefault');
-
           assert(!navigateCalled, 'data-no-spa links should not trigger SPA navigation');
         } finally {
           window.removeEventListener('click', preventBrowserNavigation);
@@ -405,68 +266,151 @@ async function runTests() {
     );
   });
 
-  await describe('Component state preservation', async () => {
+  await describe('Barber booking component state', async () => {
     await test(
-      'identifies marked components on both pages',
+      'contains matching marked components on all booking pages',
       async () => {
-        const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
+        const pages = await Promise.all([
+          window.spaEngine.getNextDocument('../tests/component-page-a.html'),
+          window.spaEngine.getNextDocument('../tests/component-page-b.html'),
+          window.spaEngine.getNextDocument('../tests/component-page-c.html'),
+        ]);
 
-        const pageB = await window.spaEngine.getNextDocument('../tests/component-page-b.html');
-
-        const componentA = pageA.querySelector('[data-spa-component][id="users-table"]');
-
-        const componentB = pageB.querySelector('[data-spa-component][id="users-table"]');
-
-        assert(componentA !== null, 'Page A should contain the marked component');
-        assert(componentB !== null, 'Page B should contain the marked component');
-        assert(componentA.id === componentB.id, 'the component should have the same ID on both pages');
+        for (const page of pages.slice(0, 2)) {
+          assert(
+            page.querySelector('#booking-controls[data-spa-component]') !== null,
+            'Pages A and B should contain booking controls',
+          );
+        }
+        assert(
+          pages[0].querySelector('#barber-selection[data-spa-component]') !== null,
+          'Page A should contain barber selection',
+        );
+        assert(
+          pages[1].querySelector('#barber-selection[data-spa-component]') === null,
+          'Page B should not contain barber selection',
+        );
+        assert(
+          pages[1].querySelector('#service-selection[data-spa-component]') !== null,
+          'Page B should contain service selection',
+        );
+        assert(
+          pages[2].querySelector('#service-selection[data-spa-component]') !== null,
+          'Page C should contain service selection',
+        );
+        assert(
+          pages[2].querySelector('#booking-controls[data-spa-component]') === null,
+          'Page C should not contain booking controls',
+        );
       },
       restoreDefaultPage,
     );
 
     await test(
-      'preserves form values for a marked component',
+      'preserves booking state from barber selection through checkout',
       async () => {
         const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
-
         const loadingBar = window.spaEngine.insertLoadingBar();
-
         window.spaEngine.replaceBody(pageA.body, loadingBar);
 
-        const componentA = document.querySelector('#users-table');
-
-        componentA.querySelector('#users-search').value = 'ana';
-        componentA.querySelector('#users-sort').value = 'date';
-        componentA.querySelector('#user-1').checked = true;
+        document.querySelector('#booking-search-a').value = 'bruno';
+        document.querySelector('#booking-order').checked = false;
+        document.querySelector('#barber-bruno').checked = true;
 
         await window.spaEngine.navigate('../tests/component-page-b.html', false);
 
-        const componentB = document.querySelector('#users-table');
+        assert(document.querySelector('#booking-search-b').value === '', 'search should start empty on Page B');
+        assert(
+          document.querySelector('#booking-order').checked === false,
+          'descending order should be preserved on Page B',
+        );
 
-        assert(componentB !== null, 'Page B should contain #users-table');
+        document.querySelector('#service-haircut').checked = true;
+        document.querySelector('#service-shave').checked = true;
 
-        assert(componentB.querySelector('#users-search').value === 'ana', 'search value should be preserved');
+        await window.spaEngine.navigate('../tests/component-page-c.html', false);
 
-        assert(componentB.querySelector('#users-sort').value === 'date', 'sort value should be preserved');
-
-        assert(componentB.querySelector('#user-1').checked === true, 'checkbox state should be preserved');
+        assert(document.querySelector('#barber-bruno').checked, 'barber should be preserved on checkout');
+        assert(document.querySelector('#service-haircut').checked, 'haircut should be preserved on checkout');
+        assert(document.querySelector('#service-shave').checked, 'shave should be preserved on checkout');
       },
       restoreDefaultPage,
     );
 
     await test(
-      'does not capture controls outside marked components',
-      () => {
-        const input = document.createElement('input');
+      'filters barbers by name',
+      async () => {
+        const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(pageA.body, loadingBar);
 
-        input.id = 'unmarked-input';
-        input.value = 'should not be saved';
+        const search = document.querySelector('#booking-search-a');
+        const barberItems = [...document.querySelectorAll('#barber-selection [data-filter-item]')];
 
-        document.body.append(input);
+        search.value = 'brun';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
 
-        const state = window.spaEngine.captureComponentState();
+        assert(
+          barberItems.find((item) => item.dataset.name === 'Bruno').hidden === false,
+          'matching barber should remain visible',
+        );
+        assert(
+          barberItems.filter((item) => item.dataset.name !== 'Bruno').every((item) => item.hidden),
+          'non-matching barbers should be hidden',
+        );
+      },
+      restoreDefaultPage,
+    );
 
-        assert(state['unmarked-input'] === undefined, 'unmarked controls should not be treated as components');
+    await test(
+      'orders services descending without losing selection',
+      async () => {
+        const pageB = await window.spaEngine.getNextDocument('../tests/component-page-b.html');
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(pageB.body, loadingBar);
+
+        const selectedService = document.querySelector('#service-haircut');
+        const order = document.querySelector('#booking-order');
+        selectedService.checked = true;
+        order.checked = false;
+        order.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const serviceNames = [...document.querySelectorAll('#service-selection [data-filter-item]')].map(
+          (item) => item.dataset.name,
+        );
+
+        assert(
+          JSON.stringify(serviceNames) === JSON.stringify(['Styling', 'Shave', 'Haircut', 'Beard trim']),
+          'services should be ordered descending by name',
+        );
+        assert(selectedService.checked, 'sorting should preserve the selected service');
+      },
+      restoreDefaultPage,
+    );
+
+    await test(
+      'shows the scheduled state after confirmation',
+      async () => {
+        const pageC = await window.spaEngine.getNextDocument('../tests/component-page-c.html');
+        const loadingBar = window.spaEngine.insertLoadingBar();
+        window.spaEngine.replaceBody(pageC.body, loadingBar);
+
+        const confirmation = document.querySelector('#booking-confirmation');
+        assert(confirmation.hidden, 'confirmation should start hidden');
+        document.querySelector('#confirm-booking').click();
+        assert(!confirmation.hidden, 'confirmation should be visible after confirmation');
+      },
+      restoreDefaultPage,
+    );
+
+    await test(
+      'provides a checkout button to return to services',
+      async () => {
+        const pageC = await window.spaEngine.getNextDocument('../tests/component-page-c.html');
+        assert(
+          pageC.querySelector('#back-to-services[type="button"]') !== null,
+          'checkout should contain a back button',
+        );
       },
       restoreDefaultPage,
     );

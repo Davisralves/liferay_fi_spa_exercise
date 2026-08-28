@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Barber Shop - Checkout</title>
+    <script src="../spaEngine.js" defer></script>
+    <script src="../spaInit.js" defer></script>
+</head>
+
+<body>
+    <h1>Confirm your appointment</h1>
+
+    <section id="barber-selection" data-spa-component>
+        <h2>Barber</h2>
+
+        <label>
+            <input id="barber-ana" name="barber" type="radio" value="ana" disabled>
+            Ana
+        </label>
+
+        <label>
+            <input id="barber-bruno" name="barber" type="radio" value="bruno" disabled>
+            Bruno
+        </label>
+
+        <label>
+            <input id="barber-carla" name="barber" type="radio" value="carla" disabled>
+            Carla
+        </label>
+    </section>
+
+    <section id="service-selection" data-spa-component>
+        <h2>Services</h2>
+
+        <label>
+            <input id="service-haircut" name="services" type="checkbox" value="haircut" disabled>
+            Haircut
+        </label>
+
+        <label>
+            <input id="service-shave" name="services" type="checkbox" value="shave" disabled>
+            Shave
+        </label>
+
+        <label>
+            <input id="service-beard-trim" name="services" type="checkbox" value="beard-trim" disabled>
+            Beard trim
+        </label>
+
+        <label>
+            <input id="service-styling" name="services" type="checkbox" value="styling" disabled>
+            Styling
+        </label>
+    </section>
+
+    <button id="confirm-booking" type="button">Confirm appointment</button>
+    <p id="booking-confirmation" hidden>Appointment scheduled successfully.</p>
+
+    <button id="back-to-services" type="button">Back to services</button>
+
+    <script>
+        (() => {
+            const backButton = document.querySelector('#back-to-services');
+            const confirmationButton = document.querySelector('#confirm-booking');
+            const confirmationMessage = document.querySelector('#booking-confirmation');
+
+            backButton.addEventListener('click', () => {
+                window.spaEngine.navigate('component-page-b.html');
+            });
+
+            confirmationButton.addEventListener('click', () => {
+                confirmationMessage.hidden = false;
+            });
+        })();
+    </script>
+</body>
+
+</html>
