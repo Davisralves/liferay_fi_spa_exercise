@@ -43,9 +43,10 @@ The exercise requires an SPA engine that:
 ```text
 index.html                 Initial page
 details.html               Page loaded through SPA navigation
-spaEngine.js               Reusable SPA engine
+scripts/spaEngine.js       Reusable SPA engine
 spaEngine.css              Loading bar styles
-spaInit.js                 Site-specific engine initialization
+scripts/spaInit.js         Site-specific engine initialization
+scripts/spaReady.js        Page initialization readiness helper
 tests/component-page-a.html Component state test page A
 tests/component-page-b.html Component state test page B
 tests/component-page-c.html Checkout and confirmation test page
@@ -59,8 +60,9 @@ tests/spaEngine.test.js    Native browser test runner and tests
 Each page that should support direct navigation loads the reusable engine and the site initialization script in its `<head>`:
 
 ```html
-<script src="spaEngine.js" defer></script>
-<script src="spaInit.js" defer></script>
+<script src="scripts/spaReady.js"></script>
+<script src="scripts/spaEngine.js" defer></script>
+<script src="scripts/spaInit.js" defer></script>
 ```
 
 The engine script exposes the class without creating an instance:
