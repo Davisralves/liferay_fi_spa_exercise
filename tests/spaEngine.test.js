@@ -93,6 +93,27 @@ async function runTests() {
       },
       restoreDefaultPage,
     );
+
+    await test(
+      'executes external scripts after body replacement',
+      async () => {
+        const nextDocument = await window.spaEngine.getNextDocument('../tests/external-script-page.html');
+
+        const loadingBar = window.spaEngine.insertLoadingBar();
+
+        window.spaEngine.replaceBody(nextDocument.body, loadingBar);
+
+        await waitFor(
+          () => document.querySelector('#external-script-result').textContent === 'external script executed',
+        );
+
+        assert(
+          document.querySelector('#external-script-result').textContent === 'external script executed',
+          'external script should execute',
+        );
+      },
+      restoreDefaultPage,
+    );
   });
 
   await describe('Route matching', async () => {
@@ -319,7 +340,7 @@ async function runTests() {
     );
 
     await test(
-      'preserves booking state from barber selection through checkout',
+      'preserves barber and service state through checkout',
       async () => {
         const pageA = await window.spaEngine.getNextDocument('../tests/component-page-a.html');
         const loadingBar = window.spaEngine.insertLoadingBar();
@@ -333,8 +354,12 @@ async function runTests() {
 
         document.querySelector('a[href="component-page-b.html"]').click();
 
-        await waitFor(() => document.querySelector('#service-selection') !== null);
+        await waitFor(() => document.title === 'Barber Shop - Choose Services');
 
+        assert(
+          document.querySelector('#barber-selection') === null,
+          'Page B should not contain the barber selection component',
+        );
         assert(document.querySelector('#booking-search-b').value === '', 'search should start empty on Page B');
         assert(
           document.querySelector('#booking-order').checked === false,
@@ -432,6 +457,7 @@ async function runTests() {
       },
       restoreDefaultPage,
     );
+
     await test(
       'applies the restored order to the service list',
       async () => {
@@ -509,8 +535,8 @@ async function runTests() {
         document.querySelector('#service-shave').checked = true;
         document.querySelector('#appointment-afternoon').checked = true;
 
-        document.querySelector('#service-haircut').dispatchEvent(new Event('change', {bubbles: true}));
-        document.querySelector('#appointment-afternoon').dispatchEvent(new Event('change', {bubbles: true}));
+        document.querySelector('#service-haircut').dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelector('#appointment-afternoon').dispatchEvent(new Event('change', { bubbles: true }));
 
         assert(
           document.querySelector('#service-summary').textContent === '2 services selected',
@@ -539,6 +565,29 @@ async function runTests() {
           document.querySelector('#appointment-summary').textContent === 'Appointment: afternoon',
           'custom state should update the appointment summary',
         );
+      },
+      restoreDefaultPage,
+    );
+
+    await test(
+      'navigates back to services from checkout',
+      async () => {
+        const pageC = await window.spaEngine.getNextDocument('../tests/component-page-c.html');
+
+        const loadingBar = window.spaEngine.insertLoadingBar();
+
+        window.spaEngine.replaceBody(pageC.body, loadingBar);
+
+        document.querySelector('#back-to-services').click();
+
+        await waitFor(() => document.title === 'Barber Shop - Choose Services');
+
+        assert(
+          document.querySelector('#service-selection') !== null,
+          'back button should navigate to the service-selection page',
+        );
+
+        assert(document.title === 'Barber Shop - Choose Services', 'back navigation should update the page title');
       },
       restoreDefaultPage,
     );
