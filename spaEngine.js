@@ -55,8 +55,8 @@ class SpaEngine {
 
       const nextDocument = await this.getNextDocument(url);
 
+      this.restoreComponentState(nextDocument);
       this.replaceBody(nextDocument.body, loadingBar);
-      this.restoreComponentState();
 
       document.title = nextDocument.title;
 
@@ -173,14 +173,14 @@ class SpaEngine {
     return this.#state;
   }
 
-  restoreComponentState() {
+  restoreComponentState(nextDocument) {
     for (const [componentId, controls] of Object.entries(this.#state)) {
-      const component = document.getElementById(componentId);
+      const component = nextDocument.querySelector(`[data-spa-component][id="${CSS.escape(componentId)}"]`);
 
       if (!component) continue;
 
       for (const [controlId, controlState] of Object.entries(controls)) {
-        const control = component.querySelector(`#${CSS.escape(controlId)}`);
+        const control = nextDocument.querySelector(`#${CSS.escape(controlId)}`);
 
         if (!control) {
           continue;
@@ -188,10 +188,8 @@ class SpaEngine {
 
         if (control.type === 'checkbox' || control.type === 'radio') {
           control.checked = controlState.checked;
-          control.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
           control.value = controlState.value;
-          control.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
     }
