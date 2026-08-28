@@ -13,9 +13,25 @@
 
     I particularly like that it makes branching based on payload formats or values explicit, reduces boilerplate, and makes error handling more predictable and readable.
 
+    Use example:
+
+    ```javascript
+    async function handleApiResponse(request) {
+      const response = await fetch(request);
+
+      return match (response) {
+        when ({ status: 200, body: { data } }) => processData(data),
+        when ({ status: 400, body: { error: 'INVALID_TOKEN' } }) => triggerReauth(),
+        when ({ status: 404 }) => showNotFoundNotification(),
+        when ({ status }) if (status >= 500) => logServerError(status),
+        default => handleUnexpectedError()
+      };
+    }
+    ```
+
 - What are a few of your least favorite things about JavaScript? Explain why.
   - My least favorite aspect of JavaScript is its limited native support for structuring and enforcing contracts in large Object-Oriented Programming (OOP) codebases.
 
-    My concern is that the language has historically provided fewer built-in tools for encapsulation, abstraction, and type-safe polymorphism. For example, it did not originally provide native private members, abstract classes, interfaces, or method overloading based on parameter types. The `class` syntax introduced in ES6 makes OOP code more familiar, but it does not add most of these features at the language level.
+  Even though the `class` syntax introduced in ES6 makes OOP code more familiar, it does not add most of these features at the language level.
 
-    Recent JavaScript standards have introduced native private fields, such as `#field`, but TypeScript addresses many of the remaining challenges by adding static typing, interfaces, access modifiers such as `private`, `protected`, and `public`, and abstract classes. These features make it easier to define clear contracts and apply robust OOP design patterns when building large-scale applications.
+  Recent JavaScript standards have introduced native private fields, such as `#field`, but TypeScript addresses many of the remaining challenges by adding static typing, interfaces, access modifiers such as `private`, `protected`, and `public`, and abstract classes. These features make it easier to define clear contracts and apply robust OOP design patterns when building large-scale applications.
